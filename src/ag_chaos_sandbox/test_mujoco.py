@@ -4,7 +4,7 @@ import time
 import math
 
 # 1. 加载极简物理模型
-xml_path = "sandbox_env.xml"
+xml_path = "static/sandbox_env.xml"
 model = mujoco.MjModel.from_xml_path(xml_path)
 data = mujoco.MjData(model)
 

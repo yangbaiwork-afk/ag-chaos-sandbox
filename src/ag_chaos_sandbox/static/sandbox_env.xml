@@ -24,10 +24,10 @@
         </body>
 
         <!-- 目标农作物：番茄花序 (幽灵形态) -->
-        <body name="tomato_flower" pos="0.9 0.2 0.2">
-            <!-- 核心：contype="0" conaffinity="0" 让机械臂物理穿透它，不产生反弹力 -->
+        <!-- 修改前：pos="0.9 0.2 0.2" -->
+        <!-- 修改后：移到机械臂的正前方，确保能撞上 -->
+        <body name="tomato_flower" pos="0.75 0.0 0.15">
             <geom name="flower_visual" type="sphere" size="0.08" rgba="1 0.2 0.2 0.5" contype="0" conaffinity="0"/>
-            <!-- 挂载空间传感器 Site -->
             <site name="flower_sensor_zone" type="sphere" size="0.08" rgba="1 1 0 0.2"/>
         </body>
     </worldbody>
