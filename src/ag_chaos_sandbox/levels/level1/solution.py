@@ -14,6 +14,9 @@ async def student_solution():
         async with websockets.connect(uri) as ws:
             print("Connected to Ag-Chaos Sandbox...")
 
+            # Register student name
+            await ws.send("Student:Alice")
+
             # Reset environment
             await ws.send("Reset")
             await asyncio.sleep(2)

@@ -22,12 +22,16 @@ LOGS_DIR = Path(__file__).resolve().parent.parent.parent / "logs"
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 SESSION_LOG_FILE = LOGS_DIR / "session_results.jsonl"
 
+# 全局存储当前活跃学生的姓名
+current_student_name = "Anonymous"
+
 def save_session_result(session_id: str):
     """保存本次会话的最终 HP 和状态，供教师评分使用"""
-    global twin_state
+    global twin_state, current_student_name
     record = {
         "timestamp": time.time(),
         "session_id": session_id,
+        "student_name": current_student_name,
         "env_no_rules_final_hp": twin_state["env_no_rules"].get("tomato_hp", 0),
         "env_rules_final_hp": twin_state["env_rules"].get("tomato_hp", 0)
     }
@@ -55,7 +59,8 @@ def create_initial_state():
 
 twin_state = {
     "env_no_rules": create_initial_state(),
-    "env_rules": create_initial_state()
+    "env_rules": create_initial_state(),
+    "rules_config": None
 }
 
 action_queue = []
@@ -82,6 +87,10 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
 
     ontology_rules = load_rules() if with_rules else {}
 
+    # 初始化前端绑定的规则（仅让 env_rules 负责上传一次给前端）
+    if with_rules:
+        twin_state["rules_config"] = ontology_rules
+
     local_action_queue = []
     last_global_queue_len = 0
 
@@ -99,7 +108,24 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
         if len(local_action_queue) > 0:
             cmd = local_action_queue.pop(0)
 
-            if cmd == "Reset":
+            if cmd.startswith("Student:"):
+                # Handle it only in one thread to avoid redundant global assignments
+                if env_type == "env_rules":
+                    global current_student_name
+                    current_student_name = cmd.split(":", 1)[1]
+                continue
+
+            elif cmd.startswith("UpdateRules:"):
+                if env_type == "env_rules":
+                    try:
+                        new_rules_str = cmd.split(":", 1)[1]
+                        ontology_rules = json.loads(new_rules_str)
+                        twin_state["rules_config"] = ontology_rules
+                    except Exception as e:
+                        print(f"Failed to update rules: {e}")
+                continue
+
+            elif cmd == "Reset":
                 # Only save log once per reset (avoid duplicate log from two env threads)
                 if env_type == "env_rules":
                     save_session_result(f"reset_{int(time.time())}")

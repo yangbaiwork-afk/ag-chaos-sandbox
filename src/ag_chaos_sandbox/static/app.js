@@ -256,10 +256,29 @@ window.sendAction = function(actionType) {
     }
 };
 
+window.applyRules = function() {
+    const textarea = document.getElementById("rules-textarea");
+    try {
+        // Validate JSON before sending
+        const rulesObj = JSON.parse(textarea.value);
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send("UpdateRules:" + JSON.stringify(rulesObj));
+            alert("Ontology 规则已成功应用到实验组！");
+        }
+    } catch (e) {
+        alert("JSON 格式错误，请检查！\n" + e.message);
+    }
+}
+
 ws.onmessage = function(event) {
     const data = JSON.parse(event.data);
     vpNoRules.updateState(data.env_no_rules);
     vpRules.updateState(data.env_rules);
+
+    // 如果后端传来了 rules_config（在双环境对象的外层），我们用它来初始化编辑器
+    if (data.rules_config && document.getElementById("rules-textarea").value === "") {
+        document.getElementById("rules-textarea").value = JSON.stringify(data.rules_config, null, 4);
+    }
 };
 
 // ================= 主渲染循环 =================

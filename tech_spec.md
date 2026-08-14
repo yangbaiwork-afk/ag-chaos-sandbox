@@ -37,6 +37,9 @@ import json
 
 async def student_agent():
     async with websockets.connect("ws://localhost:8765/ws") as ws:
+        # 注册学生姓名
+        await ws.send("Student:Bob")
+
         # 发送控制指令
         await ws.send("Target:0")
         await asyncio.sleep(2)
@@ -54,6 +57,7 @@ asyncio.run(student_agent())
 ## 通用控制接口
 
 所有前端 (或学生脚本) 发往后端的 WebSocket 消息为简单的字符串命令：
+- `Student:{name}`: 注册当前操作的学生姓名。
 - `Reset`: 重置植物 HP 和机械臂姿态。
 - `Target:{id}`: 瞄准指定 ID 的番茄。`Target:-1` 为归位。
 - `Cut`: 挥舞机械臂剪切。

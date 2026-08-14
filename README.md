@@ -24,7 +24,8 @@ import asyncio, websockets, json
 
 async def my_agent():
     async with websockets.connect("ws://localhost:8765/ws") as ws:
-        await ws.send("Target:0")  # 瞄准番茄 0
+        await ws.send("Student:张三")  # 登记你的名字
+        await ws.send("Target:0")     # 瞄准番茄 0
         await asyncio.sleep(2)
         await ws.send("Spray")     # 喷洒
 

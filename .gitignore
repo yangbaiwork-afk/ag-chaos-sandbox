@@ -9,5 +9,7 @@ wheels/
 # Virtual environments
 .venv
 .vscode
-.ideauvicorn_output.log
+.idea/
+
+uvicorn_output.log
 logs/
