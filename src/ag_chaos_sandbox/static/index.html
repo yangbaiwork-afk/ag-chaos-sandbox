@@ -2,37 +2,135 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ag-Chaos V0.5 Demo</title>
+    <title>Ag-Chaos V1.5 Demo</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #1e1e1e; color: white; font-family: sans-serif; }
-        #ui-layer { position: absolute; top: 20px; left: 20px; padding: 15px; background: rgba(0,0,0,0.7); border-radius: 8px; }
+        body { margin: 0; overflow: hidden; background-color: #1e1e1e; color: white; font-family: sans-serif; display: flex;}
+
+        #viewports-container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            transition: all 0.3s ease;
+        }
+
+        .viewport-wrapper {
+            position: relative;
+            flex: 1;
+            height: 100%;
+            display: flex;
+            border-right: 2px solid #444;
+            transition: all 0.3s ease;
+        }
+
+        .viewport-wrapper.hidden {
+            display: none;
+            flex: 0;
+        }
+
+        .viewport-wrapper:last-child {
+            border-right: none;
+        }
+
+        .canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .overlay-ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.7);
+            border-radius: 8px;
+            pointer-events: none; /* Let clicks pass through if needed, but not on buttons */
+        }
+
+        .overlay-ui button {
+            pointer-events: auto;
+        }
+
         .danger { color: #ff4444; font-weight: bold; }
         .safe { color: #00C851; font-weight: bold; }
+
+        #global-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .btn-action { background: #555; color: white; }
+        .btn-spray { background: #007bff; color: white; }
+        .btn-cut { background: #dc3545; color: white; }
+        .btn-toggle { background: #28a745; color: white; }
+
+        .title-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ddd;
+        }
     </style>
-    <!-- 引入 Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- 【新增】引入摄像机轨道控制器 -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
-    <div id="ui-layer">
-        <h2>Ag-Chaos V1.5</h2>
-        <p>HP: <span id="hp-value">100</span></p>
-        <p>Status: <span id="status-text">Connecting...</span></p>
-        <!-- 【新增】实时雷达测距 -->
-        <p>雷达距离: <span id="dist-value" style="color: #00ffff; font-weight: bold;">0.0</span> cm</p>
 
-        <!-- 原有的干预按钮 -->
-        <button onclick="sendAction('Spray')" style="padding: 8px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">💦 喷洒</button>
-        <button onclick="sendAction('Cut')" style="padding: 8px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">✂️ 剪除</button>
-
-        <!-- 【新增】瞄准调度按钮 -->
-        <div style="margin-top: 15px; border-top: 1px solid #555; padding-top: 10px;">
-            <button onclick="sendAction('Target:0')" style="padding: 5px; cursor: pointer;">🎯 瞄准番茄 1</button>
-            <button onclick="sendAction('Target:1')" style="padding: 5px; cursor: pointer;">🎯 瞄准番茄 2</button>
-            <button onclick="sendAction('Target:2')" style="padding: 5px; cursor: pointer;">🎯 瞄准番茄 3</button>
-            <button onclick="sendAction('Target:-1')" style="padding: 5px; cursor: pointer;">🏠 回到原点</button>
+    <div id="viewports-container">
+        <!-- 左侧：对照组 (无规则) -->
+        <div class="viewport-wrapper" id="vp-no-rules">
+            <div class="canvas-container" id="canvas-no-rules"></div>
+            <div class="title-badge" style="color: #ff9800;">对照组 (无 Ontology 规则)</div>
+            <div class="overlay-ui">
+                <p>HP: <span id="hp-no-rules">100</span></p>
+                <p>Status: <span id="status-no-rules">Connecting...</span></p>
+                <p>距离: <span id="dist-no-rules" style="color: #00ffff; font-weight: bold;">0.0</span> cm</p>
+            </div>
         </div>
+
+        <!-- 右侧：实验组 (有规则) -->
+        <div class="viewport-wrapper" id="vp-rules">
+            <div class="canvas-container" id="canvas-rules"></div>
+            <div class="title-badge" style="color: #00C851;">实验组 (有 Ontology 规则保护)</div>
+            <div class="overlay-ui">
+                <p>HP: <span id="hp-rules">100</span></p>
+                <p>Status: <span id="status-rules">Connecting...</span></p>
+                <p>距离: <span id="dist-rules" style="color: #00ffff; font-weight: bold;">0.0</span> cm</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全局控制面板 -->
+    <div id="global-controls">
+        <button class="btn btn-toggle" onclick="toggleViewMode()">🖥️ 切换单/双屏</button>
+        <div style="border-left: 1px solid #777; margin: 0 10px;"></div>
+        <button class="btn btn-action" onclick="sendAction('Target:0')">🎯 番茄 1</button>
+        <button class="btn btn-action" onclick="sendAction('Target:1')">🎯 番茄 2</button>
+        <button class="btn btn-action" onclick="sendAction('Target:2')">🎯 番茄 3</button>
+        <button class="btn btn-action" onclick="sendAction('Target:-1')">🏠 归位</button>
+        <div style="border-left: 1px solid #777; margin: 0 10px;"></div>
+        <button class="btn btn-spray" onclick="sendAction('Spray')">💦 喷洒</button>
+        <button class="btn btn-cut" onclick="sendAction('Cut')">✂️ 剪除</button>
     </div>
 
     <script src="/static/app.js"></script>
