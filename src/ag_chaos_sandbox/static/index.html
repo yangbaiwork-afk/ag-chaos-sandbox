@@ -11,12 +11,28 @@
     </style>
     <!-- 引入 Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- 【新增】引入摄像机轨道控制器 -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
     <div id="ui-layer">
-        <h2>Twin Status</h2>
+        <h2>Ag-Chaos V1.5</h2>
         <p>HP: <span id="hp-value">100</span></p>
         <p>Status: <span id="status-text">Connecting...</span></p>
+        <!-- 【新增】实时雷达测距 -->
+        <p>雷达距离: <span id="dist-value" style="color: #00ffff; font-weight: bold;">0.0</span> cm</p>
+
+        <!-- 原有的干预按钮 -->
+        <button onclick="sendAction('Spray')" style="padding: 8px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">💦 喷洒</button>
+        <button onclick="sendAction('Cut')" style="padding: 8px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">✂️ 剪除</button>
+
+        <!-- 【新增】瞄准调度按钮 -->
+        <div style="margin-top: 15px; border-top: 1px solid #555; padding-top: 10px;">
+            <button onclick="sendAction('Target:0')" style="padding: 5px; cursor: pointer;">🎯 瞄准番茄 1</button>
+            <button onclick="sendAction('Target:1')" style="padding: 5px; cursor: pointer;">🎯 瞄准番茄 2</button>
+            <button onclick="sendAction('Target:2')" style="padding: 5px; cursor: pointer;">🎯 瞄准番茄 3</button>
+            <button onclick="sendAction('Target:-1')" style="padding: 5px; cursor: pointer;">🏠 回到原点</button>
+        </div>
     </div>
 
     <script src="/static/app.js"></script>
