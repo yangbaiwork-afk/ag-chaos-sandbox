@@ -171,10 +171,19 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
         if active_target_idx >= 0:
             tx, ty, tz = data.geom_xpos[
                 mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, f"tomato_{active_target_idx}")]
+
+            # Ontology: 保持安全停靠距离
+            if with_rules:
+                standoff = ontology_rules.get("Target", {}).get("safe_standoff", 0.13)
+            else:
+                # 对照组无规则：盲目逼近目标中心，容易引发碰撞 (-15 HP)
+                standoff = 0.03
+
             target_yaw = math.atan2(ty, tx)
             xy_distance = math.hypot(tx, ty)
             target_pitch = -math.atan2(tz - 0.15, xy_distance)
-            target_extend = math.hypot(xy_distance, tz - 0.15) - 0.5  # 扣除基础连杆长度
+            # 根据安全停靠距离调整机械臂伸缩长度
+            target_extend = math.hypot(xy_distance, tz - 0.15) - 0.5 - standoff
 
         # P-控制器平滑过渡
         current_yaw += (target_yaw - current_yaw) * 0.05
