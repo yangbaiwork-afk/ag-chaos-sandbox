@@ -17,6 +17,24 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 app = FastAPI()
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+# ================= 0. 日志系统初始化 =================
+LOGS_DIR = Path(__file__).resolve().parent.parent.parent / "logs"
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
+SESSION_LOG_FILE = LOGS_DIR / "session_results.jsonl"
+
+def save_session_result(session_id: str):
+    """保存本次会话的最终 HP 和状态，供教师评分使用"""
+    global twin_state
+    record = {
+        "timestamp": time.time(),
+        "session_id": session_id,
+        "env_no_rules_final_hp": twin_state["env_no_rules"].get("tomato_hp", 0),
+        "env_rules_final_hp": twin_state["env_rules"].get("tomato_hp", 0)
+    }
+    with open(SESSION_LOG_FILE, "a") as f:
+        f.write(json.dumps(record) + "\n")
+
+
 # ================= 1. 环境初始化 =================
 MJCF_XML, init_tomatoes, init_leaves = generate_procedural_plant_xml()
 
@@ -81,7 +99,19 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
         if len(local_action_queue) > 0:
             cmd = local_action_queue.pop(0)
 
-            if cmd.startswith("Target:"):
+            if cmd == "Reset":
+                # Only save log once per reset (avoid duplicate log from two env threads)
+                if env_type == "env_rules":
+                    save_session_result(f"reset_{int(time.time())}")
+
+                twin_state[env_type] = create_initial_state()
+                active_target_idx = -1
+                current_yaw = 0.0
+                current_pitch = 0.0
+                current_extend = 0.0
+                continue
+
+            elif cmd.startswith("Target:"):
                 active_target_idx = int(cmd.split(":")[1])
                 twin_state[env_type]["system_status"] = f"Aiming at Target {active_target_idx}..." if active_target_idx != -1 else "Returning Home..."
 
@@ -212,6 +242,9 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     print("[网络] 前端数字孪生面板已连接")
 
+    # 生成唯一连接ID
+    session_id = f"conn_{id(websocket)}_{int(time.time())}"
+
     async def receive_commands():
         try:
             while True:
@@ -228,4 +261,9 @@ async def websocket_endpoint(websocket: WebSocket):
         except WebSocketDisconnect:
             pass
 
-    await asyncio.gather(receive_commands(), send_state())
+    try:
+        await asyncio.gather(receive_commands(), send_state())
+    except Exception as e:
+        print(f"WebSocket closed: {e}")
+    finally:
+        save_session_result(session_id)
