@@ -54,7 +54,9 @@ def create_initial_state():
         "system_status": "System Normal",
         "active_action": "None",
         "current_target_dist": 0.0,
-        "last_damage_time": 0.0
+        "last_damage_time": 0.0,
+        "wind_speed": 0.0,
+        "current_level": "level1"
     }
 
 twin_state = {
@@ -65,8 +67,11 @@ twin_state = {
 
 action_queue = []
 
-def load_rules():
-    rules_path = Path(__file__).resolve().parent / "levels" / "level1" / "rules.json"
+def load_rules(level: str = "level1"):
+    rules_path = Path(__file__).resolve().parent / "levels" / level / "rules.json"
+    if not rules_path.exists():
+        # Fallback to level1 if missing
+        rules_path = Path(__file__).resolve().parent / "levels" / "level1" / "rules.json"
     with open(rules_path, "r") as f:
         return json.load(f)
 
@@ -85,7 +90,8 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
     current_extend = 0.0
     active_target_idx = -1
 
-    ontology_rules = load_rules() if with_rules else {}
+    current_level = "level1"
+    ontology_rules = load_rules(current_level) if with_rules else {}
 
     # 初始化前端绑定的规则（仅让 env_rules 负责上传一次给前端）
     if with_rules:
@@ -125,12 +131,34 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
                         print(f"Failed to update rules: {e}")
                 continue
 
+            elif cmd.startswith("SetLevel:"):
+                current_level = cmd.split(":", 1)[1]
+                twin_state[env_type]["current_level"] = current_level
+                if with_rules:
+                    ontology_rules = load_rules(current_level)
+                    twin_state["rules_config"] = ontology_rules
+                continue
+
+            elif cmd.startswith("SetWind:"):
+                try:
+                    wind_speed = float(cmd.split(":", 1)[1])
+                    twin_state[env_type]["wind_speed"] = wind_speed
+                except Exception:
+                    pass
+                continue
+
             elif cmd == "Reset":
                 # Only save log once per reset (avoid duplicate log from two env threads)
                 if env_type == "env_rules":
                     save_session_result(f"reset_{int(time.time())}")
 
+                old_level = twin_state[env_type]["current_level"]
+                old_wind = twin_state[env_type]["wind_speed"]
+
                 twin_state[env_type] = create_initial_state()
+                twin_state[env_type]["current_level"] = old_level
+                twin_state[env_type]["wind_speed"] = old_wind
+
                 active_target_idx = -1
                 current_yaw = 0.0
                 current_pitch = 0.0
@@ -165,7 +193,12 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
                                 twin_state[env_type]["system_status"] = "✂️ 剪除成功！成功去除遮挡叶片，HP +5"
                                 twin_state[env_type]["tomato_hp"] = min(100, twin_state[env_type]["tomato_hp"] + 5)
                         elif cmd == "Spray":
-                            if dist < ontology_rules["Spray"]["min_effective_dist"]:
+                            wind_speed = twin_state[env_type].get("wind_speed", 0.0)
+                            max_wind = ontology_rules.get("Spray", {}).get("max_wind_speed", float('inf'))
+
+                            if wind_speed > max_wind:
+                                twin_state[env_type]["system_status"] = f"❌ 拦截：风速 ({wind_speed} m/s) 过高，存在药液漂移风险！"
+                            elif dist < ontology_rules["Spray"]["min_effective_dist"]:
                                 twin_state[env_type]["system_status"] = f"❌ 拦截：距离 ({dist * 100:.1f}cm) 过近，高压水柱会造成物理损伤！"
                             elif dist > ontology_rules["Spray"]["max_effective_dist"]:
                                 twin_state[env_type]["system_status"] = f"❌ 拦截：距离 ({dist * 100:.1f}cm) 过远，雾化药液已飘散！"
@@ -181,9 +214,14 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
                             if dist >= 0.10 and dist <= 0.15:
                                 twin_state[env_type]["tomato_hp"] = min(100, twin_state[env_type]["tomato_hp"] + 5)
                         elif cmd == "Spray":
-                            twin_state[env_type]["system_status"] = f"💦 强行喷洒 (距离 {dist * 100:.1f}cm)"
-                            if dist >= 0.15 and dist <= 0.30:
-                                twin_state[env_type]["tomato_hp"] = min(100, twin_state[env_type]["tomato_hp"] + 10)
+                            wind_speed = twin_state[env_type].get("wind_speed", 0.0)
+                            if wind_speed > 5.0:
+                                twin_state[env_type]["system_status"] = f"⚠️ 药害！风速过大导致药液漂移 (-15 HP)"
+                                twin_state[env_type]["tomato_hp"] -= 15
+                            else:
+                                twin_state[env_type]["system_status"] = f"💦 强行喷洒 (距离 {dist * 100:.1f}cm)"
+                                if dist >= 0.15 and dist <= 0.30:
+                                    twin_state[env_type]["tomato_hp"] = min(100, twin_state[env_type]["tomato_hp"] + 10)
 
                     # 动作后摇表现 (1秒)
                     if twin_state[env_type]["active_action"] != "None":

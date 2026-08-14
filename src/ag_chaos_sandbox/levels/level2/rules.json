@@ -1,0 +1,14 @@
+{
+    "Target": {
+        "safe_standoff": 0.13
+    },
+    "Cut": {
+        "min_safe_dist": 0.10,
+        "max_effective_dist": 0.18
+    },
+    "Spray": {
+        "min_effective_dist": 0.10,
+        "max_effective_dist": 0.30,
+        "max_wind_speed": 5.0
+    }
+}

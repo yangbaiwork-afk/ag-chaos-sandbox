@@ -28,6 +28,7 @@ class AgSandboxViewport {
         this.isPlantGenerated = false;
         this.currentAction = "None";
         this.armDir = new THREE.Vector3(1, 0, 0);
+        this.currentWind = 0.0;
 
         this.initAssets();
     }
@@ -172,11 +173,13 @@ class AgSandboxViewport {
         }
 
         // 4. 更新 UI
+        this.currentWind = data.wind_speed || 0.0;
         document.getElementById(`hp-${this.uiPrefix}`).innerText = data.tomato_hp;
         const statusEl = document.getElementById(`status-${this.uiPrefix}`);
         statusEl.innerText = data.system_status;
         statusEl.className = data.system_status.includes("❌") || data.system_status.includes("CRITICAL") || data.tomato_hp < 100 ? 'danger' : 'safe';
         document.getElementById(`dist-${this.uiPrefix}`).innerText = (data.current_target_dist * 100).toFixed(1);
+        document.getElementById(`wind-${this.uiPrefix}`).innerText = this.currentWind.toFixed(1);
     }
 
     render() {
@@ -188,8 +191,11 @@ class AgSandboxViewport {
             const positions = this.sprayParticles.geometry.attributes.position.array;
 
             for(let i=0; i<this.sprayCount; i++) {
+                // 风力吹动粒子 (假设风向是 y 轴正方向飘)
+                const windDriftY = this.currentWind * 0.005;
+
                 positions[i*3]   += this.armDir.x * 0.08 + this.sprayVel[i].x;
-                positions[i*3+1] += this.armDir.y * 0.08 + this.sprayVel[i].y;
+                positions[i*3+1] += this.armDir.y * 0.08 + this.sprayVel[i].y + windDriftY;
                 positions[i*3+2] += this.armDir.z * 0.08 + this.sprayVel[i].z - 0.005;
 
                 const dx = positions[i*3] - this.eeMesh.position.x;
