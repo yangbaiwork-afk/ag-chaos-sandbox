@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ag-Chaos V0.5 Demo</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #1e1e1e; color: white; font-family: sans-serif; }
+        #ui-layer { position: absolute; top: 20px; left: 20px; padding: 15px; background: rgba(0,0,0,0.7); border-radius: 8px; }
+        .danger { color: #ff4444; font-weight: bold; }
+        .safe { color: #00C851; font-weight: bold; }
+    </style>
+    <!-- 引入 Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="ui-layer">
+        <h2>Twin Status</h2>
+        <p>HP: <span id="hp-value">100</span></p>
+        <p>Status: <span id="status-text">Connecting...</span></p>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

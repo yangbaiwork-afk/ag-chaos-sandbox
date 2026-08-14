@@ -1,0 +1,39 @@
+<mujoco model="ag_chaos_sandbox">
+    <compiler angle="degree" coordinate="local"/>
+    <option gravity="0 0 -9.81" timestep="0.002"/>
+
+    <worldbody>
+        <!-- 光源与地板 -->
+        <light pos="0 0 3" dir="0 0 -1"/>
+        <geom type="plane" size="2 2 0.1" rgba="0.9 0.9 0.9 1"/>
+
+        <!-- 极简机械臂 (用胶囊体代表连杆，仅 2 个自由度演示) -->
+        <body name="robot_base" pos="0 0 0.1">
+            <geom type="cylinder" size="0.1 0.05" rgba="0.5 0.5 0.5 1"/>
+            
+            <body name="link1" pos="0 0 0.05">
+                <joint name="joint1" type="hinge" axis="0 0 1" range="-180 180"/>
+                <geom type="capsule" fromto="0 0 0  0.5 0 0" size="0.05" rgba="0.6 0.6 0.6 1"/>
+                
+                <body name="link2" pos="0.5 0 0">
+                    <joint name="joint2" type="hinge" axis="0 1 0" range="-90 90"/>
+                    <!-- 末端执行器 -->
+                    <geom name="end_effector" type="capsule" fromto="0 0 0  0.5 0 0" size="0.04" rgba="0.7 0.7 0.7 1"/>
+                </body>
+            </body>
+        </body>
+
+        <!-- 目标农作物：番茄花序 (幽灵形态) -->
+        <body name="tomato_flower" pos="0.9 0.2 0.2">
+            <!-- 核心：contype="0" conaffinity="0" 让机械臂物理穿透它，不产生反弹力 -->
+            <geom name="flower_visual" type="sphere" size="0.08" rgba="1 0.2 0.2 0.5" contype="0" conaffinity="0"/>
+            <!-- 挂载空间传感器 Site -->
+            <site name="flower_sensor_zone" type="sphere" size="0.08" rgba="1 1 0 0.2"/>
+        </body>
+    </worldbody>
+
+    <sensor>
+        <!-- 触觉传感器：监听机械臂末端是否进入了花序的 Site 区域 -->
+        <touch name="flower_collision" site="flower_sensor_zone"/>
+    </sensor>
+</mujoco>
