@@ -112,8 +112,8 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
     start_time = time.time()
 
     current_yaw = 0.0
-    current_pitch = 0.0
-    current_extend = 0.0
+    current_shoulder = 0.0
+    current_elbow = 0.0
     active_target_idx = -1
 
     current_level = "level1"
@@ -204,8 +204,8 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
 
                 active_target_idx = -1
                 current_yaw = 0.0
-                current_pitch = 0.0
-                current_extend = 0.0
+                current_shoulder = 0.0
+                current_elbow = 0.0
                 continue
 
             elif cmd.startswith("Target:"):
@@ -326,8 +326,8 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
                             twin_state[env]["active_action"] = "None"
                         threading.Timer(1.0, clear_action).start()
 
-        # --- B. 逆运动学 (IK) 寻迹 ---
-        target_yaw, target_pitch, target_extend = 0.0, 0.0, 0.0
+        # --- B. 逆运动学 (IK) 寻迹 (多关节仿生臂) ---
+        target_yaw, target_shoulder, target_elbow = 0.0, 0.0, 0.0
 
         active_target_name = twin_state[env_type].get("active_target_name")
         if active_target_name:
@@ -342,12 +342,51 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
             else:
                 standoff = 0.03
 
-            target_yaw = math.atan2(ty, tx)
-            xy_distance = math.hypot(tx, ty)
-            target_pitch = -math.atan2(tz - 0.15, xy_distance)
-            target_extend = math.hypot(xy_distance, tz - 0.15) - standoff
+            # Apply standoff along the vector from origin to target (simplified)
+            dist_to_target = math.hypot(tx, ty, tz - 0.1) # approx distance from base
+            if dist_to_target > 0:
+                tx_standoff = tx - (tx / dist_to_target) * standoff
+                ty_standoff = ty - (ty / dist_to_target) * standoff
+                tz_standoff = tz - ((tz - 0.1) / dist_to_target) * standoff
+            else:
+                tx_standoff, ty_standoff, tz_standoff = tx, ty, tz
 
-            if not with_rules and target_extend > 0.4:
+            # IK Calculation for 3-link arm
+            l1, l2, l3 = 0.05, 0.45, 0.45
+            base_z = 0.1
+
+            rx = tx_standoff
+            ry = ty_standoff
+            rz = tz_standoff - base_z
+
+            yaw = math.atan2(ry, rx)
+
+            shoulder_z = l1
+            r = math.hypot(rx, ry)
+            dz = rz - shoulder_z
+            d = math.hypot(r, dz)
+
+            max_reach = l2 + l3 - 1e-4
+            if d > max_reach:
+                d = max_reach
+
+            cos_elbow = (d**2 - l2**2 - l3**2) / (2 * l2 * l3)
+            cos_elbow = max(-1.0, min(1.0, cos_elbow))
+            elbow = math.acos(cos_elbow)
+
+            alpha = math.atan2(dz, r)
+            cos_shoulder = (l2**2 + d**2 - l3**2) / (2 * l2 * d)
+            cos_shoulder = max(-1.0, min(1.0, cos_shoulder))
+            beta = math.acos(cos_shoulder)
+
+            shoulder = math.pi/2 - (alpha + beta)
+
+            target_yaw = yaw
+            target_shoulder = shoulder
+            target_elbow = -elbow
+
+            # Simplified collision check logic
+            if not with_rules and d >= max_reach * 0.9:
                 if current_level == "level3" and "diseased_leaf" not in active_target_name:
                     if time.time() - twin_state[env_type].get("last_collision_time", 0) > 2.0:
                         is_t = "tomato" in active_target_name
@@ -360,12 +399,12 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
 
         # P-控制器平滑过渡
         current_yaw += (target_yaw - current_yaw) * 0.05
-        current_pitch += (target_pitch - current_pitch) * 0.05
-        current_extend += (target_extend - current_extend) * 0.05
+        current_shoulder += (target_shoulder - current_shoulder) * 0.05
+        current_elbow += (target_elbow - current_elbow) * 0.05
 
         data.qpos[0] = current_yaw
-        data.qpos[1] = current_pitch
-        data.qpos[2] = current_extend
+        data.qpos[1] = current_shoulder
+        data.qpos[2] = current_elbow
 
         mujoco.mj_step(model, data)
 
@@ -373,14 +412,16 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
 
 
         j_yaw = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_yaw")
-        j_pitch = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_pitch")
+        j_shoulder = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_shoulder")
+        j_elbow = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_elbow")
         ee_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "end_effector")
         ee_pos = data.geom_xpos[ee_id]
 
         twin_state[env_type]["arm_skeleton"] = [
             [0.0, 0.0, 0.1],
             [float(data.xanchor[j_yaw][0]), float(data.xanchor[j_yaw][1]), float(data.xanchor[j_yaw][2])],
-            [float(data.xanchor[j_pitch][0]), float(data.xanchor[j_pitch][1]), float(data.xanchor[j_pitch][2])],
+            [float(data.xanchor[j_shoulder][0]), float(data.xanchor[j_shoulder][1]), float(data.xanchor[j_shoulder][2])],
+            [float(data.xanchor[j_elbow][0]), float(data.xanchor[j_elbow][1]), float(data.xanchor[j_elbow][2])],
             [float(ee_pos[0]), float(ee_pos[1]), float(ee_pos[2])]
         ]
 

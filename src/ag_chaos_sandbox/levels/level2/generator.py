@@ -28,24 +28,22 @@ def generate_procedural_plant_xml():
             <light pos="0 0 3" dir="0 0 -1"/>
             <geom type="plane" size="2 2 0.1" rgba="0.9 0.9 0.9 1"/>
 
-            <!-- 升级版：3DOF 炮台式伸缩机械臂 (已修复质量为 0 的 Bug) -->
+            <!-- 升级版：多关节仿生机械臂 -->
             <body name="robot_base" pos="0 0 0.1">
                 <geom type="cylinder" size="0.1 0.05" rgba="0.5 0.5 0.5 1"/>
-                <body name="yaw_link" pos="0 0 0.05">
-                    <joint name="joint_yaw" type="hinge" axis="0 0 1" range="-180 180"/>
-                    <!-- 【修复】加一个小球赋予偏航关节质量 -->
+                <body name="link1" pos="0 0 0.05">
+                    <joint name="joint_yaw" type="hinge" axis="0 0 1" range="-180 180" damping="1.0" frictionloss="0.5"/>
                     <geom type="sphere" size="0.04" rgba="0.3 0.3 0.3 1"/>
 
-                    <body name="pitch_link" pos="0 0 0">
-                        <joint name="joint_pitch" type="hinge" axis="0 1 0" range="-90 90"/>
-                        <!-- 【修复】加一个小球赋予俯仰关节质量 -->
-                        <geom type="sphere" size="0.04" rgba="0.3 0.3 0.3 1"/>
+                    <body name="link2" pos="0 0 0.1">
+                        <joint name="joint_shoulder" type="hinge" axis="0 1 0" range="-150 150" damping="1.0" frictionloss="0.5"/>
+                        <geom type="capsule" fromto="0 0 0 0 0 0.45" size="0.03" rgba="0.6 0.6 0.6 1" mass="1.0"/>
 
-                        <body name="arm_boom" pos="0 0 0">
-                            <!-- 直线伸缩关节 -->
-                            <joint name="joint_extend" type="slide" axis="1 0 0" range="-0.5 1.5"/>
-                            <geom type="capsule" fromto="0 0 0 0.5 0 0" size="0.02" rgba="0.6 0.6 0.6 1"/>
-                            <geom name="end_effector" type="sphere" pos="0.5 0 0" size="0.05" rgba="0.7 0.7 0.7 1"/>
+                        <body name="link3" pos="0 0 0.45">
+                            <joint name="joint_elbow" type="hinge" axis="0 1 0" range="-150 150" damping="1.0" frictionloss="0.5"/>
+                            <geom type="capsule" fromto="0 0 0 0 0 0.45" size="0.025" rgba="0.6 0.6 0.6 1" mass="1.0"/>
+
+                            <geom name="end_effector" type="sphere" pos="0 0 0.45" size="0.05" rgba="0.7 0.7 0.7 1" mass="0.5"/>
                         </body>
                     </body>
                 </body>

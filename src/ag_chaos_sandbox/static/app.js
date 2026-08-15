@@ -184,8 +184,8 @@ class AgSandboxViewport {
         if (data.arm_skeleton && data.arm_skeleton.length > 0) {
             const points = data.arm_skeleton.map(p => new THREE.Vector3(p[0], p[1], p[2]));
             this.armSkeletonLine.geometry.setFromPoints(points);
-            this.eeMesh.position.copy(points[3]);
-            this.armDir.subVectors(points[3], points[2]).normalize();
+            this.eeMesh.position.copy(points[4]);
+            this.armDir.subVectors(points[4], points[3]).normalize();
         }
 
         // 3. 动作反馈
