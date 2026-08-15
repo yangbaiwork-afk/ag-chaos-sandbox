@@ -38,17 +38,26 @@ class AgSandboxViewport {
         canvas.width = 256;
         canvas.height = 128;
         const context = canvas.getContext('2d');
-        context.fillStyle = "rgba(0, 0, 0, 0.6)";
+
+        let bgColor = "rgba(0, 0, 0, 0.6)";
+        if (text.includes("HP")) {
+            const hpMatch = text.match(/\((\d+)\sHP\)/);
+            if (hpMatch && parseInt(hpMatch[1]) < 100) {
+                bgColor = "rgba(180, 0, 0, 0.8)";
+            }
+        }
+
+        context.fillStyle = bgColor;
         context.roundRect(10, 10, 236, 108, 20);
         context.fill();
-        context.font = "bold 45px sans-serif";
+        context.font = "bold 35px sans-serif";
         context.fillStyle = "rgba(255, 255, 255, 1.0)";
         context.textAlign = "center";
-        context.fillText(text, 128, 80);
+        context.fillText(text, 128, 75);
         const texture = new THREE.CanvasTexture(canvas);
         const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false });
         const sprite = new THREE.Sprite(spriteMat);
-        sprite.scale.set(0.15, 0.075, 1.0);
+        sprite.scale.set(0.2, 0.1, 1.0);
         return sprite;
     }
 
@@ -66,6 +75,7 @@ class AgSandboxViewport {
         // 植物群组
         this.plantGroup = new THREE.Group();
         this.scene.add(this.plantGroup);
+        this.tomatoLabels = [];
 
         // 喷洒粒子
         this.sprayCount = 150;
@@ -104,7 +114,20 @@ class AgSandboxViewport {
     updateState(data) {
         if (!data) return;
 
+
+        // Check if level changed to clear plant geometry
+        if ((this.currentLevel && this.currentLevel !== data.current_level) || data.plant_structure_updated) {
+            this.isPlantGenerated = false;
+            // Remove old plant parts
+            while(this.plantGroup.children.length > 0){
+                this.plantGroup.remove(this.plantGroup.children[0]);
+            }
+            this.tomatoLabels = [];
+        }
+        this.currentLevel = data.current_level;
+
         // 1. 生成植物 (仅一次)
+
         if (!this.isPlantGenerated && data.plant_structure) {
             const basePos = data.plant_structure.stem_base;
             this.plantGroup.position.set(basePos[0], basePos[1], basePos[2]);
@@ -123,9 +146,11 @@ class AgSandboxViewport {
                 tMesh.position.set(t[0], t[1], t[2]);
                 this.plantGroup.add(tMesh);
 
-                const label = this.createTextSprite(`番茄 ${index}`);
+                const hp = data.tomato_hps ? data.tomato_hps[index] : 100;
+                const label = this.createTextSprite(`番茄 ${index} (${hp} HP)`);
                 label.position.set(t[0], t[1], t[2] + 0.06);
                 this.plantGroup.add(label);
+                this.tomatoLabels.push(label);
             });
 
             data.plant_structure.leaves.forEach(l => {
@@ -136,6 +161,21 @@ class AgSandboxViewport {
                 lMesh.lookAt(new THREE.Vector3(l[0]*2, l[1]*2, l[2]));
                 this.plantGroup.add(lMesh);
             });
+
+            if (data.plant_structure.diseased_leaves) {
+                data.plant_structure.diseased_leaves.forEach((l, idx) => {
+                    const lGeo = new THREE.PlaneGeometry(0.12, 0.08);
+                    const lMat = new THREE.MeshBasicMaterial({ color: 0x88aa22, side: THREE.DoubleSide }); // Yellowish green
+                    const lMesh = new THREE.Mesh(lGeo, lMat);
+                    lMesh.position.set(l[0], l[1], l[2]);
+                    lMesh.lookAt(new THREE.Vector3(l[0]*2, l[1]*2, l[2]));
+                    this.plantGroup.add(lMesh);
+
+                    const label = this.createTextSprite(`病叶 ${idx}`);
+                    label.position.set(l[0], l[1], l[2] + 0.06);
+                    this.plantGroup.add(label);
+                });
+            }
 
             this.isPlantGenerated = true;
         }
@@ -172,12 +212,27 @@ class AgSandboxViewport {
             this.cutLine.geometry.setAttribute('position', new THREE.BufferAttribute(pts, 3));
         }
 
-        // 4. 更新 UI
+        // 4. 更新 3D Label
+        if (this.tomatoLabels && data.tomato_hps) {
+            data.tomato_hps.forEach((hp, idx) => {
+                const label = this.tomatoLabels[idx];
+                if (label) {
+                    // Update sprite map using the same function
+                    const spriteMat = label.material;
+                    const newSprite = this.createTextSprite(`番茄 ${idx} (${hp} HP)`);
+                    spriteMat.map.dispose(); // clean old texture
+                    spriteMat.map = newSprite.material.map;
+                    spriteMat.needsUpdate = true;
+                }
+            });
+        }
+
+        // 5. 更新 UI
         this.currentWind = data.wind_speed || 0.0;
-        document.getElementById(`hp-${this.uiPrefix}`).innerText = data.tomato_hp;
+        document.getElementById(`hp-${this.uiPrefix}`).innerText = JSON.stringify(data.tomato_hps);
         const statusEl = document.getElementById(`status-${this.uiPrefix}`);
         statusEl.innerText = data.system_status;
-        statusEl.className = data.system_status.includes("❌") || data.system_status.includes("CRITICAL") || data.tomato_hp < 100 ? 'danger' : 'safe';
+        statusEl.className = data.system_status.includes("❌") || data.system_status.includes("CRITICAL") || data.system_status.includes("药害") ? 'danger' : 'safe';
         document.getElementById(`dist-${this.uiPrefix}`).innerText = (data.current_target_dist * 100).toFixed(1);
         document.getElementById(`wind-${this.uiPrefix}`).innerText = this.currentWind.toFixed(1);
     }

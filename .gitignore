@@ -13,3 +13,4 @@ wheels/
 
 uvicorn_output.log
 logs/
+node_modules/

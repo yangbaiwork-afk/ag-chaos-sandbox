@@ -1,0 +1,26 @@
+{
+  "Target": {
+    "requires": [
+      "Path_Clearance"
+    ],
+    "safe_standoff": 0.13
+  },
+  "Cut": {
+    "forbidden_targets": [
+      "tomato",
+      "healthy_leaf"
+    ],
+    "allowed_targets": [
+      "diseased_leaf"
+    ],
+    "max_effective_dist": 0.2
+  },
+  "Spray": {
+    "requires": [
+      "Path_Clearance",
+      "No_Occlusion"
+    ],
+    "max_wind_speed": 5.0,
+    "max_effective_dist": 0.35
+  }
+}

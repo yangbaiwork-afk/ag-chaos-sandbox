@@ -102,7 +102,7 @@
             <div class="canvas-container" id="canvas-no-rules"></div>
             <div class="title-badge" style="color: #ff9800;">对照组 (无 Ontology 规则)</div>
             <div class="overlay-ui">
-                <p>HP: <span id="hp-no-rules">100</span></p>
+                <p>HPs: <span id="hp-no-rules">[100, 100, 100]</span></p>
                 <p>Status: <span id="status-no-rules">Connecting...</span></p>
                 <p>距离: <span id="dist-no-rules" style="color: #00ffff; font-weight: bold;">0.0</span> cm</p>
                 <p>风速: <span id="wind-no-rules" style="color: #ffaa00; font-weight: bold;">0.0</span> m/s</p>
@@ -114,7 +114,7 @@
             <div class="canvas-container" id="canvas-rules"></div>
             <div class="title-badge" style="color: #00C851;">实验组 (有 Ontology 规则保护)</div>
             <div class="overlay-ui">
-                <p>HP: <span id="hp-rules">100</span></p>
+                <p>HPs: <span id="hp-rules">[100, 100, 100]</span></p>
                 <p>Status: <span id="status-rules">Connecting...</span></p>
                 <p>距离: <span id="dist-rules" style="color: #00ffff; font-weight: bold;">0.0</span> cm</p>
                 <p>风速: <span id="wind-rules" style="color: #ffaa00; font-weight: bold;">0.0</span> m/s</p>
@@ -132,6 +132,7 @@
             <div style="margin-top: 5px;">
                 <button class="btn" style="background: #444; color: white; padding: 4px 8px;" onclick="sendAction('SetLevel:level1')">Level 1</button>
                 <button class="btn" style="background: #444; color: white; padding: 4px 8px;" onclick="sendAction('SetLevel:level2')">Level 2</button>
+                <button class="btn" style="background: #444; color: white; padding: 4px 8px;" onclick="sendAction('SetLevel:level3')">Level 3</button>
             </div>
         </div>
 
@@ -159,6 +160,8 @@
         <button class="btn btn-action" onclick="sendAction('Target:0')">🎯 番茄 1</button>
         <button class="btn btn-action" onclick="sendAction('Target:1')">🎯 番茄 2</button>
         <button class="btn btn-action" onclick="sendAction('Target:2')">🎯 番茄 3</button>
+        <button class="btn btn-action" style="background: #aa8822" onclick="sendAction('Target:diseased_leaf_0')">🎯 病叶 1</button>
+        <button class="btn btn-action" style="background: #aa8822" onclick="sendAction('Target:diseased_leaf_1')">🎯 病叶 2</button>
         <button class="btn btn-action" onclick="sendAction('Target:-1')">🏠 归位</button>
         <div style="border-left: 1px solid #777; margin: 0 10px;"></div>
         <button class="btn btn-spray" onclick="sendAction('Spray')">💦 喷洒</button>
