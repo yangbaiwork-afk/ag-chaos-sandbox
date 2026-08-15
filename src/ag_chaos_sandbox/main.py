@@ -383,7 +383,7 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
 
             target_yaw = yaw
             target_shoulder = shoulder
-            target_elbow = -elbow
+            target_elbow = elbow
 
             # Simplified collision check logic
             if not with_rules and d >= max_reach * 0.9:
@@ -402,18 +402,19 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
         current_shoulder += (target_shoulder - current_shoulder) * 0.05
         current_elbow += (target_elbow - current_elbow) * 0.05
 
-        data.qpos[0] = current_yaw
-        data.qpos[1] = current_shoulder
-        data.qpos[2] = current_elbow
+        j_yaw = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_yaw")
+        j_shoulder = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_shoulder")
+        j_elbow = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_elbow")
+
+        if j_yaw >= 0: data.qpos[model.jnt_qposadr[j_yaw]] = current_yaw
+        if j_shoulder >= 0: data.qpos[model.jnt_qposadr[j_shoulder]] = current_shoulder
+        if j_elbow >= 0: data.qpos[model.jnt_qposadr[j_elbow]] = current_elbow
 
         mujoco.mj_step(model, data)
 
         # --- C. 骨架提取 & 雷达测距同步 ---
 
 
-        j_yaw = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_yaw")
-        j_shoulder = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_shoulder")
-        j_elbow = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_elbow")
         ee_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "end_effector")
         ee_pos = data.geom_xpos[ee_id]
 
