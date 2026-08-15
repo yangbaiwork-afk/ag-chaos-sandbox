@@ -358,6 +358,17 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
                             twin_state[env_type]["system_status"] = "💥 碰撞警报！机械臂靠太近戳伤目标 (-15 HP)"
                             twin_state[env_type]["last_collision_time"] = time.time()
 
+        # P-控制器平滑过渡
+        current_yaw += (target_yaw - current_yaw) * 0.05
+        current_pitch += (target_pitch - current_pitch) * 0.05
+        current_extend += (target_extend - current_extend) * 0.05
+
+        data.qpos[0] = current_yaw
+        data.qpos[1] = current_pitch
+        data.qpos[2] = current_extend
+
+        mujoco.mj_step(model, data)
+
         # --- C. 骨架提取 & 雷达测距同步 ---
 
 
