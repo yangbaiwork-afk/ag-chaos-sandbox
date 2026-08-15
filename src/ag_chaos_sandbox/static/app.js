@@ -229,7 +229,7 @@ class AgSandboxViewport {
 
         // 5. 更新 UI
         this.currentWind = data.wind_speed || 0.0;
-        document.getElementById(`hp-${this.uiPrefix}`).innerText = JSON.stringify(data.tomato_hps);
+        document.getElementById(`hp-${this.uiPrefix}`).innerHTML = data.tomato_hps.map((hp, i) => `<li>番茄 ${i+1}: ${hp} HP</li>`).join('');
         const statusEl = document.getElementById(`status-${this.uiPrefix}`);
         statusEl.innerText = data.system_status;
         statusEl.className = data.system_status.includes("❌") || data.system_status.includes("CRITICAL") || data.system_status.includes("药害") ? 'danger' : 'safe';

@@ -381,23 +381,32 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
             twin_state[env_type]["current_target_dist"] = 0.0
 
         # --- D. 物理碰撞监测 (无敌帧冷却逻辑) ---
-        if active_target_idx >= 0:
-            tx, ty, tz = data.geom_xpos[
-                mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, f"tomato_{active_target_idx}")]
-            distance = math.hypot(ee_pos[0] - tx, ee_pos[1] - ty, ee_pos[2] - tz)
+        is_t = active_target_name and "tomato" in active_target_name
+        m_idx = re.search(r'_(\d+)$', active_target_name) if active_target_name else None
+        t_idx = int(m_idx.group(1)) if (is_t and m_idx) else -1
 
-            curr_t = time.time()
-            last_dmg_times = twin_state[env_type].get("last_damage_times", [])
+        if t_idx >= 0 and not with_rules:
+            try:
+                tx, ty, tz = data.geom_xpos[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, f"tomato_{t_idx}")]
+                distance = math.hypot(ee_pos[0] - tx, ee_pos[1] - ty, ee_pos[2] - tz)
 
-            if distance < 0.08 and (curr_t - last_dmg_times[active_target_idx]) > 1.5:
-                if twin_state[env_type]["tomato_hps"][active_target_idx] > 0:
-                    twin_state[env_type]["tomato_hps"][active_target_idx] -= 15
-                    twin_state[env_type]["last_damage_times"][active_target_idx] = curr_t
-                    if not twin_state[env_type]["system_status"].startswith("❌"):
-                        twin_state[env_type]["system_status"] = f"CRITICAL: Collision on Tomato {active_target_idx}! (-15 HP)"
-            elif distance >= 0.08 and (curr_t - last_dmg_times[active_target_idx]) > 1.5:
-                if twin_state[env_type]["active_action"] == "None" and not twin_state[env_type]["system_status"].startswith("Aiming") and not twin_state[env_type]["system_status"].startswith("❌"):
-                    twin_state[env_type]["system_status"] = "System Normal"
+                curr_t = time.time()
+                last_dmg_times = twin_state[env_type].get("last_damage_times", [])
+
+                if distance < 0.08 and (curr_t - last_dmg_times[t_idx]) > 1.5:
+                    if twin_state[env_type]["tomato_hps"][t_idx] > 0:
+                        twin_state[env_type]["tomato_hps"][t_idx] -= 15
+                        twin_state[env_type]["last_damage_times"][t_idx] = curr_t
+                        if not twin_state[env_type]["system_status"].startswith("❌"):
+                            twin_state[env_type]["system_status"] = f"CRITICAL: Collision on Tomato {t_idx}! (-15 HP)"
+                elif distance >= 0.08 and (curr_t - last_dmg_times[t_idx]) > 1.5:
+                    if twin_state[env_type]["active_action"] == "None" and not twin_state[env_type]["system_status"].startswith("Aiming") and not twin_state[env_type]["system_status"].startswith("❌"):
+                        twin_state[env_type]["system_status"] = "System Normal"
+            except Exception:
+                pass
+        elif with_rules and active_target_name:
+            if twin_state[env_type]["active_action"] == "None" and not twin_state[env_type]["system_status"].startswith("Aiming") and not twin_state[env_type]["system_status"].startswith("❌"):
+                 twin_state[env_type]["system_status"] = "System Normal"
 
         # 锁频维持仿真流速
         time_util_next = model.opt.timestep - (time.time() - step_start)
