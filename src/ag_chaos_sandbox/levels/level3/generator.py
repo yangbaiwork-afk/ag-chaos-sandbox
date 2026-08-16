@@ -2,26 +2,34 @@ import math
 import random
 
 def generate_procedural_plant_xml():
-    """动态生成带有随机叶片和番茄的 MuJoCo XML 以及升级版 3DOF 机械臂"""
+    """Level 3 Generator with diseased leaves."""
     tomatoes = []
     leaves = []
+    diseased_leaves = []
 
-    # 随机生成 3 个番茄
+    # Generate 3 tomatoes
     for _ in range(3):
         h = random.uniform(0.2, 0.5)
         angle = random.uniform(0, 2 * math.pi)
         r = random.uniform(0.1, 0.2)
         tomatoes.append([r * math.cos(angle), r * math.sin(angle), h])
 
-    # 随机生成 5 片叶子
-    for _ in range(5):
+    # Generate healthy leaves
+    for _ in range(3):
         h = random.uniform(0.1, 0.6)
         angle = random.uniform(0, 2 * math.pi)
         r = random.uniform(0.05, 0.15)
         leaves.append([r * math.cos(angle), r * math.sin(angle), h])
 
+    # Generate diseased leaves (Level 3 specific)
+    for _ in range(2):
+        h = random.uniform(0.1, 0.6)
+        angle = random.uniform(0, 2 * math.pi)
+        r = random.uniform(0.05, 0.15)
+        diseased_leaves.append([r * math.cos(angle), r * math.sin(angle), h])
+
     xml_str = f"""
-    <mujoco model="ag_chaos_sandbox_v2">
+    <mujoco model="ag_chaos_sandbox_v3">
         <compiler angle="degree" coordinate="local"/>
         <option gravity="0 0 -9.81" timestep="0.002"/>
         <worldbody>
@@ -49,22 +57,22 @@ def generate_procedural_plant_xml():
                 </body>
             </body>
 
-            <!-- 植物主茎 -->
             <body name="main_stem" pos="0.6 0 0">
                 <geom type="cylinder" size="0.02 0.3" pos="0 0 0.3" rgba="0.2 0.8 0.2 1" />
     """
 
-    # 动态插入番茄
     for i, t in enumerate(tomatoes):
         xml_str += f'<geom name="tomato_{i}" type="sphere" size="0.04" pos="{t[0]} {t[1]} {t[2]}" rgba="1 0.2 0.2 1" contype="0" conaffinity="0"/>\n'
 
-    # 动态插入叶片
     for i, l in enumerate(leaves):
         xml_str += f'<geom name="leaf_{i}" type="ellipsoid" size="0.06 0.04 0.01" pos="{l[0]} {l[1]} {l[2]}" rgba="0.1 0.6 0.1 1" contype="0" conaffinity="0"/>\n'
+
+    for i, dl in enumerate(diseased_leaves):
+        xml_str += f'<geom name="diseased_leaf_{i}" type="ellipsoid" size="0.06 0.04 0.01" pos="{dl[0]} {dl[1]} {dl[2]}" rgba="0.6 0.6 0.1 1" contype="0" conaffinity="0"/>\n'
 
     xml_str += """
             </body>
         </worldbody>
     </mujoco>
     """
-    return xml_str, tomatoes, leaves
+    return xml_str, tomatoes, leaves, diseased_leaves

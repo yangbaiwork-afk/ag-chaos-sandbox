@@ -18,9 +18,47 @@
   - **渲染模式**: 支持两分屏（左右并排渲染）或单屏独占（通过 UI 切换）。
   - UI 统一控制，按钮点击后，只发送一个动作信号，后端负责分发。
 
+## 学生代码接入 SDK (Student API)
+
+为了方便学生进行算法开发并测试他们编写的 `ontology.json` 规则，我们允许学生编写外部 Python 脚本，通过 WebSocket 与平台交互。
+
+**接入方式：**
+学生可以使用标准 `websockets` 库连接到 `ws://localhost:8765/ws`。
+
+**数据流向：**
+1. **状态感知 (Read)**：接收 JSON 格式的双环境孪生状态（包含摄像头骨架和植物坐标）。
+2. **控制下发 (Write)**：发送纯文本字符串命令控制系统。
+
+**示例脚本 (Python)：**
+```python
+import asyncio
+import websockets
+import json
+
+async def student_agent():
+    async with websockets.connect("ws://localhost:8765/ws") as ws:
+        # 注册学生姓名
+        await ws.send("Student:Bob")
+
+        # 发送控制指令
+        await ws.send("Target:0")
+        await asyncio.sleep(2)
+        await ws.send("Spray")
+
+        # 持续监听状态
+        while True:
+            state_str = await ws.recv()
+            state = json.loads(state_str)
+            print(f"HP: {state['env_rules']['tomato_hp']}")
+
+asyncio.run(student_agent())
+```
+
 ## 通用控制接口
 
-所有前端发往后端的 WebSocket 消息为简单的字符串命令：
+所有前端 (或学生脚本) 发往后端的 WebSocket 消息为简单的字符串命令：
+- `Student:{name}`: 注册当前操作的学生姓名。
+- `Reset`: 重置植物 HP 和机械臂姿态。
 - `Target:{id}`: 瞄准指定 ID 的番茄。`Target:-1` 为归位。
 - `Cut`: 挥舞机械臂剪切。
 - `Spray`: 开启末端喷雾。
