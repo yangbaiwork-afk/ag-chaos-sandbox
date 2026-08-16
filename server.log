@@ -1,0 +1,22 @@
+INFO:     Started server process [1525508]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[后台] 启动程序化农业物理引擎 (env_no_rules)...
+[后台] 启动程序化农业物理引擎 (env_rules)...
+[后台] 启动程序化农业物理引擎 (env_no_rules)...
+[后台] 启动程序化农业物理引擎 (env_rules)...
+INFO:     127.0.0.1:43198 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43198 - "GET /static/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43208 - "WebSocket /ws" [accepted]
+INFO:     connection open
+[网络] 前端数字孪生面板已连接
+INFO:     127.0.0.1:47802 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42080 - "GET / HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1525508]
+hutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1468990]

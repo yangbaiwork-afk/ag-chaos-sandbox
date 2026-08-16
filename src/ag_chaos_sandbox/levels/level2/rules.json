@@ -8,6 +8,7 @@
     },
     "Spray": {
         "min_effective_dist": 0.10,
-        "max_effective_dist": 0.30
+        "max_effective_dist": 0.30,
+        "max_wind_speed": 5.0
     }
 }
