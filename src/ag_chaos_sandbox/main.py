@@ -132,8 +132,7 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
         # 同步全局队列
         current_global_len = len(action_queue)
         if current_global_len > last_global_queue_len:
-            for i in range(last_global_queue_len, current_global_len):
-                local_action_queue.append(action_queue[i])
+            local_action_queue.extend(action_queue[last_global_queue_len:current_global_len])
             last_global_queue_len = current_global_len
 
         # --- A. 指令解析与规则拦截 ---
