@@ -281,16 +281,16 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
                             reqs = ontology_rules.get("Spray", {}).get("requires", [])
 
                             if "Path_Clearance" in reqs and has_occlusion:
-                                twin_state[env_type]["system_status"] = f"❌ 拦截：路径被遮挡，无法安全到达！需先执行修剪。"
+                                twin_state[env_type]["system_status"] = "❌ 拦截：路径被遮挡，无法安全到达！需先执行修剪。"
                             elif "No_Occlusion" in reqs and has_occlusion:
-                                twin_state[env_type]["system_status"] = f"❌ 拦截：有病叶遮挡，无法喷洒！需先执行修剪。"
+                                twin_state[env_type]["system_status"] = "❌ 拦截：有病叶遮挡，无法喷洒！需先执行修剪。"
                             elif wind_speed > max_wind:
                                 twin_state[env_type]["system_status"] = f"❌ 拦截：风速 ({wind_speed} m/s) 过高，存在药液漂移风险！"
                             elif dist > ontology_rules.get("Spray", {}).get("max_effective_dist", 0.35):
                                 twin_state[env_type]["system_status"] = f"❌ 拦截：距离 ({dist * 100:.1f}cm) 过远，雾化药液已飘散！"
                             else:
                                 twin_state[env_type]["active_action"] = "Spray"
-                                twin_state[env_type]["system_status"] = f"💦 喷洒成功！"
+                                twin_state[env_type]["system_status"] = "💦 喷洒成功！"
                                 if is_tomato and target_tomato_idx >= 0:
                                     twin_state[env_type]["tomato_hps"][target_tomato_idx] = min(100, twin_state[env_type]["tomato_hps"][target_tomato_idx] + 10)
 
@@ -309,11 +309,11 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
                         elif cmd == "Spray":
                             wind_speed = twin_state[env_type].get("wind_speed", 0.0)
                             if wind_speed > 5.0:
-                                twin_state[env_type]["system_status"] = f"⚠️ 药害！风速过大 (-15 HP)"
+                                twin_state[env_type]["system_status"] = "⚠️ 药害！风速过大 (-15 HP)"
                                 if is_tomato and target_tomato_idx >= 0:
                                     twin_state[env_type]["tomato_hps"][target_tomato_idx] -= 15
                             elif has_occlusion:
-                                twin_state[env_type]["system_status"] = f"⚠️ 喷洒被遮挡，效果差 (-10 HP)"
+                                twin_state[env_type]["system_status"] = "⚠️ 喷洒被遮挡，效果差 (-10 HP)"
                                 if is_tomato and target_tomato_idx >= 0:
                                     twin_state[env_type]["tomato_hps"][target_tomato_idx] -= 10
                             else:
