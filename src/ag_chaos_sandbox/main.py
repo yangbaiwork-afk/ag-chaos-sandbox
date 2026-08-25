@@ -109,8 +109,6 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
     model = mujoco.MjModel.from_xml_string(model_xml)
     data = mujoco.MjData(model)
 
-    start_time = time.time()
-
     current_yaw = 0.0
     current_shoulder = 0.0
     current_elbow = 0.0
@@ -122,6 +120,12 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
     # 初始化前端绑定的规则（仅让 env_rules 负责上传一次给前端）
     if with_rules:
         twin_state["rules_config"] = ontology_rules
+
+    # Cache joint and geom IDs
+    j_yaw = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_yaw")
+    j_shoulder = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_shoulder")
+    j_elbow = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_elbow")
+    ee_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "end_effector")
 
     local_action_queue = []
     last_global_queue_len = 0
@@ -169,6 +173,12 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
                 model = mujoco.MjModel.from_xml_string(new_xml)
                 data = mujoco.MjData(model)
                 active_target_idx = -1
+
+                # Re-cache joint and geom IDs since model has changed
+                j_yaw = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_yaw")
+                j_shoulder = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_shoulder")
+                j_elbow = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_elbow")
+                ee_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "end_effector")
 
                 old_wind = twin_state[env_type]["wind_speed"]
                 twin_state[env_type] = create_initial_state()
@@ -231,7 +241,6 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
                 if not active_target_name:
                     twin_state[env_type]["system_status"] = "❌ 动作被拦截：未锁定任何目标！" if with_rules else "❌ 执行失败：未锁定任何目标！"
                 else:
-                    ee_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "end_effector")
                     ee_pos = data.geom_xpos[ee_id]
 
                     try:
@@ -281,16 +290,16 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
                             reqs = ontology_rules.get("Spray", {}).get("requires", [])
 
                             if "Path_Clearance" in reqs and has_occlusion:
-                                twin_state[env_type]["system_status"] = f"❌ 拦截：路径被遮挡，无法安全到达！需先执行修剪。"
+                                twin_state[env_type]["system_status"] = "❌ 拦截：路径被遮挡，无法安全到达！需先执行修剪。"
                             elif "No_Occlusion" in reqs and has_occlusion:
-                                twin_state[env_type]["system_status"] = f"❌ 拦截：有病叶遮挡，无法喷洒！需先执行修剪。"
+                                twin_state[env_type]["system_status"] = "❌ 拦截：有病叶遮挡，无法喷洒！需先执行修剪。"
                             elif wind_speed > max_wind:
                                 twin_state[env_type]["system_status"] = f"❌ 拦截：风速 ({wind_speed} m/s) 过高，存在药液漂移风险！"
                             elif dist > ontology_rules.get("Spray", {}).get("max_effective_dist", 0.35):
                                 twin_state[env_type]["system_status"] = f"❌ 拦截：距离 ({dist * 100:.1f}cm) 过远，雾化药液已飘散！"
                             else:
                                 twin_state[env_type]["active_action"] = "Spray"
-                                twin_state[env_type]["system_status"] = f"💦 喷洒成功！"
+                                twin_state[env_type]["system_status"] = "💦 喷洒成功！"
                                 if is_tomato and target_tomato_idx >= 0:
                                     twin_state[env_type]["tomato_hps"][target_tomato_idx] = min(100, twin_state[env_type]["tomato_hps"][target_tomato_idx] + 10)
 
@@ -309,11 +318,11 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
                         elif cmd == "Spray":
                             wind_speed = twin_state[env_type].get("wind_speed", 0.0)
                             if wind_speed > 5.0:
-                                twin_state[env_type]["system_status"] = f"⚠️ 药害！风速过大 (-15 HP)"
+                                twin_state[env_type]["system_status"] = "⚠️ 药害！风速过大 (-15 HP)"
                                 if is_tomato and target_tomato_idx >= 0:
                                     twin_state[env_type]["tomato_hps"][target_tomato_idx] -= 15
                             elif has_occlusion:
-                                twin_state[env_type]["system_status"] = f"⚠️ 喷洒被遮挡，效果差 (-10 HP)"
+                                twin_state[env_type]["system_status"] = "⚠️ 喷洒被遮挡，效果差 (-10 HP)"
                                 if is_tomato and target_tomato_idx >= 0:
                                     twin_state[env_type]["tomato_hps"][target_tomato_idx] -= 10
                             else:
@@ -402,20 +411,18 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
         current_shoulder += (target_shoulder - current_shoulder) * 0.05
         current_elbow += (target_elbow - current_elbow) * 0.05
 
-        j_yaw = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_yaw")
-        j_shoulder = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_shoulder")
-        j_elbow = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_elbow")
-
-        if j_yaw >= 0: data.qpos[model.jnt_qposadr[j_yaw]] = current_yaw
-        if j_shoulder >= 0: data.qpos[model.jnt_qposadr[j_shoulder]] = current_shoulder
-        if j_elbow >= 0: data.qpos[model.jnt_qposadr[j_elbow]] = current_elbow
+        if j_yaw >= 0:
+            data.qpos[model.jnt_qposadr[j_yaw]] = current_yaw
+        if j_shoulder >= 0:
+            data.qpos[model.jnt_qposadr[j_shoulder]] = current_shoulder
+        if j_elbow >= 0:
+            data.qpos[model.jnt_qposadr[j_elbow]] = current_elbow
 
         mujoco.mj_step(model, data)
 
         # --- C. 骨架提取 & 雷达测距同步 ---
 
 
-        ee_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "end_effector")
         ee_pos = data.geom_xpos[ee_id]
 
         twin_state[env_type]["arm_skeleton"] = [
