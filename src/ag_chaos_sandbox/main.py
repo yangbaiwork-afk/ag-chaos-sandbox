@@ -136,8 +136,7 @@ def run_simulation(env_type: str, model_xml: str, with_rules: bool):
         # 同步全局队列
         current_global_len = len(action_queue)
         if current_global_len > last_global_queue_len:
-            for i in range(last_global_queue_len, current_global_len):
-                local_action_queue.append(action_queue[i])
+            local_action_queue.extend(action_queue[last_global_queue_len:current_global_len])
             last_global_queue_len = current_global_len
 
         # --- A. 指令解析与规则拦截 ---
@@ -485,26 +484,35 @@ async def get_index():
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    print("[网络] 前端数字孪生面板已连接")
+    ip = websocket.client.host if websocket.client else "unknown"
+    print(f"[websocket] [{ip}] 前端数字孪生面板已连接")
 
     # 生成唯一连接ID
     session_id = f"conn_{id(websocket)}_{int(time.time())}"
 
+    has_disconnected = False
+
     async def receive_commands():
+        nonlocal has_disconnected
         try:
             while True:
                 data = await websocket.receive_text()
                 action_queue.append(data)
         except WebSocketDisconnect:
-            pass
+            if not has_disconnected:
+                print(f"[websocket] [{current_student_name}/{ip} - {session_id}] 前端数字孪生面板已断开连接")
+                has_disconnected = True
 
     async def send_state():
+        nonlocal has_disconnected
         try:
             while True:
                 await websocket.send_text(json.dumps(twin_state))
                 await asyncio.sleep(0.016)
         except WebSocketDisconnect:
-            pass
+            if not has_disconnected:
+                print(f"[websocket] [{current_student_name}/{ip} - {session_id}] 前端数字孪生面板已断开连接")
+                has_disconnected = True
 
     try:
         await asyncio.gather(receive_commands(), send_state())

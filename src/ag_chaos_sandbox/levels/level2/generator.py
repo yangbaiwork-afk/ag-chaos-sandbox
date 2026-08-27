@@ -20,7 +20,7 @@ def generate_procedural_plant_xml():
         r = random.uniform(0.05, 0.15)
         leaves.append([r * math.cos(angle), r * math.sin(angle), h])
 
-    xml_str = """
+    xml_parts = ["""
     <mujoco model="ag_chaos_sandbox_v2">
         <compiler angle="degree" coordinate="local"/>
         <option gravity="0 0 -9.81" timestep="0.002"/>
@@ -52,19 +52,19 @@ def generate_procedural_plant_xml():
             <!-- 植物主茎 -->
             <body name="main_stem" pos="0.6 0 0">
                 <geom type="cylinder" size="0.02 0.3" pos="0 0 0.3" rgba="0.2 0.8 0.2 1" />
-    """
+    """]
 
     # 动态插入番茄
     for i, t in enumerate(tomatoes):
-        xml_str += f'<geom name="tomato_{i}" type="sphere" size="0.04" pos="{t[0]} {t[1]} {t[2]}" rgba="1 0.2 0.2 1" contype="0" conaffinity="0"/>\n'
+        xml_parts.append(f'<geom name="tomato_{i}" type="sphere" size="0.04" pos="{t[0]} {t[1]} {t[2]}" rgba="1 0.2 0.2 1" contype="0" conaffinity="0"/>\n')
 
     # 动态插入叶片
-    for i, l in enumerate(leaves):
-        xml_str += f'<geom name="leaf_{i}" type="ellipsoid" size="0.06 0.04 0.01" pos="{l[0]} {l[1]} {l[2]}" rgba="0.1 0.6 0.1 1" contype="0" conaffinity="0"/>\n'
+    for i, leaf in enumerate(leaves):
+        xml_parts.append(f'<geom name="leaf_{i}" type="ellipsoid" size="0.06 0.04 0.01" pos="{leaf[0]} {leaf[1]} {leaf[2]}" rgba="0.1 0.6 0.1 1" contype="0" conaffinity="0"/>\n')
 
-    xml_str += """
+    xml_parts.append("""
             </body>
         </worldbody>
     </mujoco>
-    """
-    return xml_str, tomatoes, leaves
+    """)
+    return "".join(xml_parts), tomatoes, leaves
