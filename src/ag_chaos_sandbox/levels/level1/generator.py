@@ -20,7 +20,7 @@ def generate_procedural_plant_xml():
         r = random.uniform(0.05, 0.15)
         leaves.append([r * math.cos(angle), r * math.sin(angle), h])
 
-    xml_parts = ["""
+    xml_parts = ["
     <mujoco model="ag_chaos_sandbox_v2">
         <compiler angle="degree" coordinate="local"/>
         <option gravity="0 0 -9.81" timestep="0.002"/>
